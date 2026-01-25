@@ -3,7 +3,7 @@
   "displayName": "AI Usage Monitor",
   "description": "Monitor AI platform usage and balance across multiple providers",
   "version": "0.1.0",
-  "publisher": "your-publisher-name",
+  "publisher": "lukelzlz",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -215,7 +215,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-repo/ai-usage-monitor"
+    "url": "https://github.com/lukelzlz/ai-usage-monitor"
   },
   "license": "MIT"
 }
