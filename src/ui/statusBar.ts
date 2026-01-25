@@ -53,7 +53,7 @@ export class UsageStatusBar {
   private createStatusBarItem(instanceId: string): vscode.StatusBarItem {
     const statusBarItem = vscode.window.createStatusBarItem(
       `ai-usage-monitor.${instanceId}`,
-      vscode.StatusBarAlignment.Left,
+      vscode.StatusBarAlignment.Right,
       100
     );
     statusBarItem.command = 'ai-usage-monitor.show';
