@@ -2,7 +2,7 @@
   "name": "ai-usage-monitor",
   "displayName": "AI Usage Monitor",
   "description": "Monitor AI platform usage and balance across multiple providers and accounts",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "publisher": "lukelzlz",
   "engines": {
     "vscode": "^1.85.0"
@@ -148,6 +148,11 @@
           "default": 300,
           "minimum": 0,
           "description": "自动刷新间隔（秒），0 表示禁用自动刷新"
+        },
+        "ai-usage-monitor.statusBar.showAccountName": {
+          "type": "boolean",
+          "default": false,
+          "description": "在状态栏显示账号名称"
         },
         "ai-usage-monitor.accounts": {
           "type": "array",

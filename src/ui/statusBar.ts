@@ -6,19 +6,27 @@ import { PlatformUsage } from '../core/types';
 
 export class UsageStatusBar {
   private statusBarItems: Map<string, vscode.StatusBarItem> = new Map();
+  private config: vscode.WorkspaceConfiguration;
 
-  constructor() {}
+  constructor() {
+    this.config = vscode.workspace.getConfiguration('ai-usage-monitor');
+  }
 
   /**
    * Update usage for a specific account
    */
   updateUsage(instanceId: string, usage: PlatformUsage): void {
     const statusBarItem = this.statusBarItems.get(instanceId) || this.createStatusBarItem(instanceId);
+    const showAccountName = this.config.get<boolean>('statusBar.showAccountName', false);
 
     // For custom (New API) type, show balance only without progress bar
     if (usage.platformType === 'custom') {
       const balance = this.getBalance(usage);
-      statusBarItem.text = `$(credit-card) ${balance}`;
+      if (showAccountName) {
+        statusBarItem.text = `$(credit-card) ${usage.displayName}: ${balance}`;
+      } else {
+        statusBarItem.text = `$(credit-card) ${balance}`;
+      }
       statusBarItem.color = new vscode.ThemeColor('statusBar.foreground');
       statusBarItem.tooltip = `${usage.displayName}: 剩余额度 ${balance}`;
       statusBarItem.show();
@@ -41,7 +49,11 @@ export class UsageStatusBar {
       color = 'warningForeground';
     }
 
-    statusBarItem.text = `$(pulse) ${percentage.toFixed(0)}% ${progressBar}`;
+    if (showAccountName) {
+      statusBarItem.text = `$(pulse) ${usage.displayName}: ${percentage.toFixed(0)}% ${progressBar}`;
+    } else {
+      statusBarItem.text = `$(pulse) ${percentage.toFixed(0)}% ${progressBar}`;
+    }
     statusBarItem.color = new vscode.ThemeColor(color);
     statusBarItem.tooltip = `${usage.displayName}: ${percentage.toFixed(1)}%`;
     statusBarItem.show();
