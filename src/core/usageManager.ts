@@ -58,6 +58,7 @@ export class UsageManager {
     await import('../adapters/openai');
     await import('../adapters/custom');
     await import('../adapters/claude');
+    await import('../adapters/openrouter');
     logger.info('Platform types registered');
   }
 
@@ -505,6 +506,7 @@ function getDefaultName(platformType: string): string {
     openai: 'OpenAI',
     custom: 'New API',
     claude: 'Claude',
+    openrouter: 'OpenRouter',
   };
   return names[platformType] || platformType;
 }

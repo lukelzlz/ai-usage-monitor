@@ -19,6 +19,7 @@ A VSCode extension to monitor AI platform usage and balance across multiple prov
 | OpenAI | ✅ Supported | `/v1/usage` |
 | Claude (Anthropic) | ✅ Supported | `/v1/organizations/usage_report/messages` 或 `/v1/organizations/usage_report/claude_code` |
 | New API | ✅ Supported | `/api/user/self` (标准接口，适用于各种镜像站) |
+| OpenRouter | ✅ Supported | `/api/v1/credits` |
 
 ## Installation
 
@@ -84,6 +85,13 @@ Open VSCode Settings and search for `AI Usage Monitor`.
 | `ai-usage-monitor.platforms.custom.apiUrl` | New API instance URL |
 | `ai-usage-monitor.platforms.custom.apiKey` | New API key (Bearer token) |
 | `ai-usage-monitor.platforms.custom.userId` | User ID (for New-Api-User header) |
+
+#### OpenRouter
+
+| Setting | Description |
+|---------|-------------|
+| `ai-usage-monitor.platforms.openrouter.enabled` | Enable OpenRouter monitoring |
+| `ai-usage-monitor.platforms.openrouter.apiKey` | Your OpenRouter API key |
 
 ## Usage
 
