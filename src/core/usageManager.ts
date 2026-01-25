@@ -26,7 +26,7 @@ export class UsageManager {
   }
 
   /**
-   * Initialize the manager
+   * Initialize manager
    */
   async initialize(): Promise<void> {
     logger.info('Initializing AI Usage Monitor');
@@ -76,7 +76,7 @@ export class UsageManager {
   }
 
   /**
-   * Register the TreeView
+   * Register TreeView
    */
   private registerTreeView(): void {
     this.disposables.push(
@@ -128,7 +128,7 @@ export class UsageManager {
   }
 
   /**
-   * Show the usage panel
+   * Show usage panel
    */
   private showPanel(): void {
     vscode.commands.executeCommand('workbench.view.extension.ai-usage-monitor');
@@ -156,7 +156,7 @@ export class UsageManager {
     }
 
     // Open settings for this platform
-    vscode.commands.executeCommand('workbench.action.openSettings', `${adapter.getConfigSection()}`);
+    vscode.commands.executeCommand('workbench.action.openSettings', adapter.getConfigSection());
   }
 
   /**

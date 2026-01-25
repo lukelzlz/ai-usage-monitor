@@ -10,23 +10,18 @@ export class RefreshScheduler {
   private timer: NodeJS.Timeout | null = null;
   private callback: RefreshCallback | null = null;
   private configListener: vscode.Disposable | null = null;
+  private refreshInterval: number = 300;
 
   constructor() {
     this.watchConfiguration();
   }
 
-  /**
-   * Start auto-refresh with a callback
-   */
   start(callback: RefreshCallback): void {
     this.stop();
     this.callback = callback;
     this.scheduleNext();
   }
 
-  /**
-   * Stop auto-refresh
-   */
   stop(): void {
     if (this.timer) {
       clearTimeout(this.timer);
@@ -35,9 +30,6 @@ export class RefreshScheduler {
     this.callback = null;
   }
 
-  /**
-   * Schedule the next refresh
-   */
   private scheduleNext(): void {
     const interval = this.getRefreshInterval();
 
@@ -60,21 +52,27 @@ export class RefreshScheduler {
     }, interval * 1000);
   }
 
-  /**
-   * Get refresh interval from configuration
-   */
+  async trigger(): Promise<void> {
+    if (this.callback) {
+      try {
+        await this.callback();
+      } catch (error) {
+        logger.error(`Error in manual refresh: ${error}`);
+      }
+    }
+  }
+
   private getRefreshInterval(): number {
     const config = vscode.workspace.getConfiguration('ai-usage-monitor');
     return config.get<number>('refreshInterval', 300);
   }
 
-  /**
-   * Watch for configuration changes
-   */
   private watchConfiguration(): void {
     this.configListener = vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('ai-usage-monitor.refreshInterval')) {
-        logger.debug('Refresh interval configuration changed');
+        const newInterval = this.getRefreshInterval();
+        logger.info(`Refresh interval changed to ${newInterval} seconds`);
+
         if (this.callback) {
           this.start(this.callback);
         }
@@ -82,18 +80,6 @@ export class RefreshScheduler {
     });
   }
 
-  /**
-   * Manually trigger a refresh
-   */
-  async trigger(): Promise<void> {
-    if (this.callback) {
-      await this.callback();
-    }
-  }
-
-  /**
-   * Dispose resources
-   */
   dispose(): void {
     this.stop();
     if (this.configListener) {
