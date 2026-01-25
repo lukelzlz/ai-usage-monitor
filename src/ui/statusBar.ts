@@ -14,6 +14,18 @@ export class UsageStatusBar {
    */
   updateUsage(instanceId: string, usage: PlatformUsage): void {
     const statusBarItem = this.statusBarItems.get(instanceId) || this.createStatusBarItem(instanceId);
+
+    // For custom (New API) type, show balance only without progress bar
+    if (usage.platformType === 'custom') {
+      const balance = this.getBalance(usage);
+      statusBarItem.text = `$(credit-card) ${balance}`;
+      statusBarItem.color = new vscode.ThemeColor('statusBar.foreground');
+      statusBarItem.tooltip = `${usage.displayName}: 剩余额度 ${balance}`;
+      statusBarItem.show();
+      return;
+    }
+
+    // For other platforms, show percentage with progress bar
     const percentage = this.calculatePercentage(usage);
 
     // Create progress bar
@@ -71,6 +83,25 @@ export class UsageStatusBar {
   }
 
   /**
+   * Get balance from usage data (for custom/New API type)
+   */
+  private getBalance(usage: PlatformUsage): string {
+    if (!usage.usages || usage.usages.length === 0) {
+      return '0';
+    }
+
+    // Find first usage with percentage < 0 (balance display)
+    for (const u of usage.usages) {
+      if (u.percentage < 0) {
+        const unit = u.unit || '';
+        return `${u.currentUsage}${unit}`;
+      }
+    }
+
+    return '0';
+  }
+
+  /**
    * Calculate percentage from usage data
    */
   private calculatePercentage(usage: PlatformUsage): number {
@@ -78,7 +109,7 @@ export class UsageStatusBar {
       return 0;
     }
 
-    // Find the first usage with percentage >= 0
+    // Find first usage with percentage >= 0
     for (const u of usage.usages) {
       if (u.percentage >= 0) {
         return u.percentage;
