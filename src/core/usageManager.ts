@@ -57,6 +57,7 @@ export class UsageManager {
     await import('../adapters/deepseek');
     await import('../adapters/openai');
     await import('../adapters/custom');
+    await import('../adapters/claude');
     logger.info('Platform types registered');
   }
 
@@ -503,6 +504,7 @@ function getDefaultName(platformType: string): string {
     deepseek: 'DeepSeek',
     openai: 'OpenAI',
     custom: 'New API',
+    claude: 'Claude',
   };
   return names[platformType] || platformType;
 }

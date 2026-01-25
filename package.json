@@ -18,6 +18,8 @@
     "openai",
     "deepseek",
     "zhipu",
+    "claude",
+    "anthropic",
     "multi-account"
   ],
   "activationEvents": [
@@ -168,8 +170,8 @@
               },
               "type": {
                 "type": "string",
-                "description": "平台类型：zhipu, deepseek, openai, custom",
-                "enum": ["zhipu", "deepseek", "openai", "custom"]
+                "description": "平台类型：zhipu, deepseek, openai, claude, custom",
+                "enum": ["zhipu", "deepseek", "openai", "claude", "custom"]
               },
               "name": {
                 "type": "string",

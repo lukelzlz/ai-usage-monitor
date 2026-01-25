@@ -17,6 +17,7 @@ A VSCode extension to monitor AI platform usage and balance across multiple prov
 | 智谱AI (Zhipu AI) | ✅ Supported | `/api/monitor/usage/quota/limit` |
 | DeepSeek | ✅ Supported | `/user/balance` |
 | OpenAI | ✅ Supported | `/v1/usage` |
+| Claude (Anthropic) | ✅ Supported | `/v1/organizations/usage_report/messages` 或 `/v1/organizations/usage_report/claude_code` |
 | New API | ✅ Supported | `/api/user/self` (标准接口，适用于各种镜像站) |
 
 ## Installation
@@ -63,6 +64,17 @@ Open VSCode Settings and search for `AI Usage Monitor`.
 | `ai-usage-monitor.platforms.openai.enabled` | Enable OpenAI monitoring |
 | `ai-usage-monitor.platforms.openai.apiKey` | Your OpenAI API key |
 | `ai-usage-monitor.platforms.openai.monthlyLimit` | Expected monthly spending limit (USD) |
+
+#### Claude (Anthropic)
+
+| Setting | Description |
+|---------|-------------|
+| `ai-usage-monitor.platforms.claude.enabled` | Enable Claude monitoring |
+| `ai-usage-monitor.platforms.claude.apiKey` | Your Anthropic Admin API Key (from Settings > Organization > API Keys) |
+| `ai-usage-monitor.platforms.claude.reportType` | Report type: `messages` (Messages Usage) or `claude_code` (Claude Code Usage) |
+| `ai-usage-monitor.platforms.claude.monthlyLimit` | Monthly cost limit for percentage calculation (USD, only for messages report) |
+| `ai-usage-monitor.platforms.claude.dailySessionLimit` | Daily session limit for percentage calculation (only for claude_code report) |
+| `ai-usage-monitor.platforms.claude.dailyCostLimit` | Daily cost limit for percentage calculation (USD, only for claude_code report) |
 
 #### New API (标准接口)
 
