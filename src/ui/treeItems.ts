@@ -1,141 +1,131 @@
 /**
- * Tree Item definitions for the Usage TreeView
+ * Tree Item definitions for the usage view
  */
 import * as vscode from 'vscode';
 import { PlatformUsage, UsageInfo } from '../core/types';
 
 /**
- * Platform node - Top level item for each platform
+ * Platform tree item - represents a platform/account
  */
 export class PlatformTreeItem extends vscode.TreeItem {
-  constructor(public readonly platform: PlatformUsage) {
-    // Default to expanded state
-    super(platform.displayName, vscode.TreeItemCollapsibleState.Expanded);
-    this.iconPath = new vscode.ThemeIcon(platform.icon);
+  readonly usage: PlatformUsage;
+
+  constructor(usage: PlatformUsage) {
+    const label = usage.displayName;
+    super(label, vscode.TreeItemCollapsibleState.Expanded);
+
+    this.usage = usage;
     this.contextValue = 'platform';
-    this.description = platform.error ? 'Error' : '';
-    this.tooltip = this.createTooltip();
-  }
-
-  private createTooltip(): vscode.MarkdownString {
-    const tooltip = new vscode.MarkdownString();
-    tooltip.appendMarkdown(`**${this.platform.displayName}**\n\n`);
-
-    if (this.platform.error) {
-      tooltip.appendMarkdown(`❌ Error: ${this.platform.error}\n\n`);
-    }
-
-    tooltip.appendMarkdown(`📅 Last updated: ${this.platform.lastUpdated.toLocaleString()}`);
-
-    return tooltip;
+    this.iconPath = new vscode.ThemeIcon(usage.icon);
+    this.description = usage.enabled ? '' : '已禁用';
+    this.tooltip = `${usage.displayName}${usage.enabled ? '' : ' (已禁用)'}`;
   }
 }
 
 /**
- * Usage node - Second level item for each usage metric
- * Shows only values without progress bar in sidebar
+ * Usage tree item - represents a usage metric
  */
 export class UsageTreeItem extends vscode.TreeItem {
-  constructor(
-    public readonly platformId: string,
-    public readonly usage: UsageInfo
-  ) {
-    super(usage.label, vscode.TreeItemCollapsibleState.None);
+  readonly instanceId: string;
+  readonly usage: UsageInfo;
 
-    // Check if this is a balance display (percentage = -1) or percentage display
-    if (usage.percentage < 0) {
-      // Balance display - show remaining amount
-      const unit = usage.unit || '';
-      this.description = `${usage.currentUsage}${unit}`;
-      this.iconPath = new vscode.ThemeIcon('credit-card', new vscode.ThemeColor('charts.blue'));
+  constructor(instanceId: string, usage: UsageInfo) {
+    let label = usage.label;
+    let description = '';
+
+    if (usage.percentage >= 0) {
+      // Percentage display
+      description = `${usage.percentage.toFixed(0)}%`;
     } else {
-      // Percentage display - show percentage only (no progress bar in sidebar)
-      this.description = `${usage.percentage.toFixed(1)}%`;
-      this.iconPath = this.getStatusIcon(usage.percentage);
+      // Balance display (percentage < 0 indicates balance)
+      const unit = usage.unit || '';
+      description = `${usage.currentUsage}${unit}`;
     }
 
-    // Tooltip with details
-    this.tooltip = this.createTooltip();
+    super(label, vscode.TreeItemCollapsibleState.None);
 
-    this.contextValue = 'usage';
-  }
+    this.instanceId = instanceId;
+    this.usage = usage;
 
-  private getStatusIcon(percentage: number): vscode.ThemeIcon {
-    if (percentage >= 80) {
-      return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.red'));
-    }
-    if (percentage >= 60) {
-      return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.yellow'));
-    }
-    return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.green'));
-  }
+    this.description = description;
 
-  private createTooltip(): vscode.MarkdownString {
-    const tooltip = new vscode.MarkdownString();
-    tooltip.appendMarkdown(`**${this.usage.label}**\n\n`);
-
-    if (this.usage.percentage >= 0) {
-      tooltip.appendMarkdown(`使用率: ${this.usage.percentage.toFixed(1)}%\n\n`);
+    // Set icon based on percentage
+    if (usage.percentage < 0) {
+      // Balance display
+      this.iconPath = new vscode.ThemeIcon('credit-card', new vscode.ThemeColor('charts.blue'));
+    } else if (usage.percentage < 60) {
+      this.iconPath = new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('terminal.ansiGreen'));
+    } else if (usage.percentage < 80) {
+      this.iconPath = new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('terminal.ansiYellow'));
+    } else {
+      this.iconPath = new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('terminal.ansiRed'));
     }
 
-    if (this.usage.currentUsage !== undefined && this.usage.total !== undefined) {
-      const unit = this.usage.unit || '';
-      if (this.usage.percentage < 0) {
-        // Balance display
-        tooltip.appendMarkdown(`**剩余**: ${this.usage.currentUsage}${unit}\n`);
-        tooltip.appendMarkdown(`**总量**: ${this.usage.total}${unit}\n`);
-      } else {
-        tooltip.appendMarkdown(`**当前**: ${this.usage.currentUsage}${unit}\n`);
-        tooltip.appendMarkdown(`**总量**: ${this.usage.total}${unit}\n`);
-      }
+    // Tooltip with progress bar
+    if (usage.percentage >= 0) {
+      const filled = Math.floor(usage.percentage / 10);
+      const empty = 10 - filled;
+      const progressBar = '▓'.repeat(filled) + '░'.repeat(empty);
+      this.tooltip = `${usage.label}: ${usage.percentage.toFixed(1)}% [${progressBar}]`;
+    } else {
+      this.tooltip = `${usage.label}: ${usage.currentUsage}${usage.unit || ''}`;
     }
-
-    if (this.usage.details && Object.keys(this.usage.details).length > 0) {
-      tooltip.appendMarkdown(`\n**详情**:\n`);
-      for (const [key, value] of Object.entries(this.usage.details)) {
-        tooltip.appendMarkdown(`- ${key}: ${value}\n`);
-      }
-    }
-
-    return tooltip;
   }
 }
 
 /**
- * Empty state item - Shown when no platforms are configured
+ * Empty tree item - shown when no usage data
  */
 export class EmptyTreeItem extends vscode.TreeItem {
-  constructor(message: string) {
-    super(message, vscode.TreeItemCollapsibleState.None);
-    this.iconPath = new vscode.ThemeIcon('info');
+  constructor(instanceId: string) {
+    super('暂无数据', vscode.TreeItemCollapsibleState.None);
     this.contextValue = 'empty';
+    this.iconPath = new vscode.ThemeIcon('info', new vscode.ThemeColor('descriptionForeground'));
+    this.tooltip = '等待刷新数据...';
   }
 }
 
 /**
- * Not configured item - Shown for a platform that is not configured
+ * Not configured tree item - shown when platform is not configured
  */
 export class NotConfiguredTreeItem extends vscode.TreeItem {
-  constructor(platformId: string, displayName: string) {
-    super(`${displayName} (未配置)`, vscode.TreeItemCollapsibleState.None);
-    this.iconPath = new vscode.ThemeIcon('circle-outline');
-    this.contextValue = 'not-configured';
-    this.description = 'Click to configure';
-    this.tooltip = new vscode.MarkdownString(
-      `**${displayName}** is not configured.\n\nClick to open settings.`
-    );
+  readonly instanceId: string;
+
+  constructor(instanceId: string, name: string) {
+    super(`${name} (未配置)`, vscode.TreeItemCollapsibleState.None);
+    this.instanceId = instanceId;
+    this.contextValue = 'notConfigured';
+    this.iconPath = new vscode.ThemeIcon('warning', new vscode.ThemeColor('editorWarning.foreground'));
+    this.tooltip = '点击配置此账号';
   }
 }
 
 /**
- * Error item - Shown when there's an error fetching data
+ * Error tree item - shown when fetch failed
  */
 export class ErrorTreeItem extends vscode.TreeItem {
-  constructor(public readonly platformId: string, error: string) {
-    super('Error', vscode.TreeItemCollapsibleState.None);
-    this.iconPath = new vscode.ThemeIcon('error', new vscode.ThemeColor('errorForeground'));
+  readonly instanceId: string;
+
+  constructor(instanceId: string, error: string) {
+    super(`错误: ${error}`, vscode.TreeItemCollapsibleState.None);
+    this.instanceId = instanceId;
     this.contextValue = 'error';
-    this.description = error.substring(0, 50) + (error.length > 50 ? '...' : '');
-    this.tooltip = new vscode.MarkdownString(`**Error**:\n\n${error}`);
+    this.iconPath = new vscode.ThemeIcon('error', new vscode.ThemeColor('errorForeground'));
+    this.tooltip = error;
+  }
+}
+
+/**
+ * Add account tree item - shown as a button to add new accounts
+ */
+export class AddAccountTreeItem extends vscode.TreeItem {
+  constructor() {
+    super('+ 添加账号', vscode.TreeItemCollapsibleState.None);
+    this.contextValue = 'addAccount';
+    this.iconPath = new vscode.ThemeIcon('add');
+    this.command = {
+      command: 'ai-usage-monitor.addAccount',
+      title: '添加账号',
+    };
   }
 }

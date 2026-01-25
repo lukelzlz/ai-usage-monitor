@@ -1,11 +1,11 @@
 /**
  * DeepSeek Platform Adapter
  */
-import * as vscode from 'vscode';
 import { BaseAdapter } from './base';
 import { ConfigSchema, FetchResult, PlatformUsage, UsageInfo, PlatformConsole } from '../core/types';
 import { fetchJson } from '../utils/http';
 import { logger } from '../utils/logger';
+import { platformTypeRegistry } from './platformTypes';
 
 /**
  * DeepSeek API response structure
@@ -17,18 +17,29 @@ interface DeepSeekBalanceResponse {
 }
 
 export class DeepSeekAdapter extends BaseAdapter {
-  readonly id = 'deepseek';
-  readonly displayName = 'DeepSeek';
-  readonly icon = '$(hubot)';
-  readonly consoleUrl: PlatformConsole = {
-    url: 'https://platform.deepseek.com/user_center',
-    label: 'Open DeepSeek Console',
-  };
-
   private readonly endpoint = 'https://api.deepseek.com/user/balance';
 
+  constructor(instanceId: string, instanceName: string, config: Record<string, any>) {
+    super(instanceId, instanceName, config);
+  }
+
+  protected getPlatformType(): string {
+    return 'deepseek';
+  }
+
+  protected getIcon(): string {
+    return '$(hubot)';
+  }
+
+  protected getConsoleUrl(): PlatformConsole {
+    return {
+      url: 'https://platform.deepseek.com/user_center',
+      label: 'Open DeepSeek Console',
+    };
+  }
+
   /**
-   * Check if the adapter is configured (has API key)
+   * Check if adapter is configured (has API key)
    */
   isConfigured(): boolean {
     const apiKey = this.getConfigValue<string>('apiKey', '');
@@ -106,12 +117,14 @@ export class DeepSeekAdapter extends BaseAdapter {
     ];
 
     return {
-      platform: this.id,
-      displayName: this.displayName,
+      platform: this.platformType,
+      displayName: this.instanceName,
       icon: this.icon,
       usages,
       lastUpdated: new Date(),
       enabled: this.isEnabled(),
+      instanceId: this.instanceId,
+      platformType: this.platformType,
     };
   }
 
@@ -120,13 +133,6 @@ export class DeepSeekAdapter extends BaseAdapter {
    */
   getConfigurationSchema(): ConfigSchema[] {
     return [
-      {
-        key: 'enabled',
-        type: 'boolean',
-        label: 'Enable DeepSeek',
-        default: false,
-        description: 'Enable DeepSeek usage monitoring',
-      },
       {
         key: 'apiKey',
         type: 'string',
@@ -146,5 +152,12 @@ export class DeepSeekAdapter extends BaseAdapter {
   }
 }
 
-// Export singleton instance
-export const deepseekAdapter = new DeepSeekAdapter();
+// Register platform type
+platformTypeRegistry.register({
+  id: 'deepseek',
+  displayName: 'DeepSeek',
+  icon: '$(hubot)',
+  configSchema: new DeepSeekAdapter('temp', 'temp', {}).getConfigurationSchema(),
+  consoleUrl: 'https://platform.deepseek.com/user_center',
+  AdapterClass: DeepSeekAdapter,
+});

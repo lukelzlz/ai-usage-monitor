@@ -1,11 +1,11 @@
 /**
  * Zhipu AI (智谱AI) Platform Adapter
  */
-import * as vscode from 'vscode';
 import { BaseAdapter } from './base';
 import { ConfigSchema, FetchResult, PlatformUsage, UsageInfo, PlatformConsole } from '../core/types';
 import { fetchJson } from '../utils/http';
 import { logger } from '../utils/logger';
+import { platformTypeRegistry } from './platformTypes';
 
 /**
  * Zhipu AI API response structure
@@ -25,18 +25,29 @@ interface ZhipuQuotaLimitResponse {
 }
 
 export class ZhipuAdapter extends BaseAdapter {
-  readonly id = 'zhipu';
-  readonly displayName = '智谱AI';
-  readonly icon = '$(sparkle)';
-  readonly consoleUrl: PlatformConsole = {
-    url: 'https://open.bigmodel.cn/usercenter/billing',
-    label: 'Open Zhipu Console',
-  };
-
   private readonly endpoints = {
     production: 'https://open.bigmodel.cn/api/monitor/usage/quota/limit',
     development: 'https://dev.bigmodel.cn/api/monitor/usage/quota/limit',
   };
+
+  constructor(instanceId: string, instanceName: string, config: Record<string, any>) {
+    super(instanceId, instanceName, config);
+  }
+
+  protected getPlatformType(): string {
+    return 'zhipu';
+  }
+
+  protected getIcon(): string {
+    return '$(sparkle)';
+  }
+
+  protected getConsoleUrl(): PlatformConsole {
+    return {
+      url: 'https://open.bigmodel.cn/usercenter/billing',
+      label: 'Open Zhipu Console',
+    };
+  }
 
   /**
    * Check if the adapter is configured (has token)
@@ -80,7 +91,6 @@ export class ZhipuAdapter extends BaseAdapter {
       });
 
       // Check for API-level errors
-      // Success if data exists and limits array is present
       if (!response.data || !response.data.limits) {
         throw new Error(`Zhipu AI API error: ${response.msg || 'No data returned'}`);
       }
@@ -118,12 +128,14 @@ export class ZhipuAdapter extends BaseAdapter {
     }
 
     return {
-      platform: this.id,
-      displayName: this.displayName,
+      platform: this.platformType,
+      displayName: this.instanceName,
       icon: this.icon,
       usages,
       lastUpdated: new Date(),
       enabled: this.isEnabled(),
+      instanceId: this.instanceId,
+      platformType: this.platformType,
     };
   }
 
@@ -166,13 +178,6 @@ export class ZhipuAdapter extends BaseAdapter {
   getConfigurationSchema(): ConfigSchema[] {
     return [
       {
-        key: 'enabled',
-        type: 'boolean',
-        label: 'Enable Zhipu AI',
-        default: false,
-        description: 'Enable Zhipu AI usage monitoring',
-      },
-      {
         key: 'token',
         type: 'string',
         label: 'Authorization Token',
@@ -192,5 +197,12 @@ export class ZhipuAdapter extends BaseAdapter {
   }
 }
 
-// Export singleton instance
-export const zhipuAdapter = new ZhipuAdapter();
+// Register platform type
+platformTypeRegistry.register({
+  id: 'zhipu',
+  displayName: '智谱AI',
+  icon: '$(sparkle)',
+  configSchema: new ZhipuAdapter('temp', 'temp', {}).getConfigurationSchema(),
+  consoleUrl: 'https://open.bigmodel.cn/usercenter/billing',
+  AdapterClass: ZhipuAdapter,
+});

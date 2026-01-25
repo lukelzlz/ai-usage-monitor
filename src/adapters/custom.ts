@@ -1,11 +1,11 @@
 /**
  * New API Standard Adapter - Supports New API standard interface used by many mirror sites
  */
-import * as vscode from 'vscode';
 import { BaseAdapter } from './base';
-import { ConfigSchema, FetchResult, PlatformUsage, UsageInfo } from '../core/types';
+import { ConfigSchema, FetchResult, PlatformUsage, UsageInfo, PlatformConsole } from '../core/types';
 import { fetchJson } from '../utils/http';
 import { logger } from '../utils/logger';
+import { platformTypeRegistry } from './platformTypes';
 
 /**
  * New API standard response structure
@@ -25,9 +25,21 @@ interface NewApiResponse {
 }
 
 export class CustomAdapter extends BaseAdapter {
-  readonly id = 'custom';
-  readonly displayName = 'New API';
-  readonly icon = '$(server)';
+  constructor(instanceId: string, instanceName: string, config: Record<string, any>) {
+    super(instanceId, instanceName, config);
+  }
+
+  protected getPlatformType(): string {
+    return 'custom';
+  }
+
+  protected getIcon(): string {
+    return '$(server)';
+  }
+
+  protected getConsoleUrl(): PlatformConsole | undefined {
+    return undefined;
+  }
 
   /**
    * Check if the adapter is configured
@@ -128,12 +140,14 @@ export class CustomAdapter extends BaseAdapter {
     ];
 
     return {
-      platform: this.id,
-      displayName: this.displayName,
+      platform: this.platformType,
+      displayName: this.instanceName,
       icon: this.icon,
       usages,
       lastUpdated: new Date(),
       enabled: this.isEnabled(),
+      instanceId: this.instanceId,
+      platformType: this.platformType,
     };
   }
 
@@ -142,13 +156,6 @@ export class CustomAdapter extends BaseAdapter {
    */
   getConfigurationSchema(): ConfigSchema[] {
     return [
-      {
-        key: 'enabled',
-        type: 'boolean',
-        label: '启用自定义API',
-        default: false,
-        description: '启用自定义API监控',
-      },
       {
         key: 'apiUrl',
         type: 'string',
@@ -175,5 +182,11 @@ export class CustomAdapter extends BaseAdapter {
   }
 }
 
-// Export singleton instance
-export const customAdapter = new CustomAdapter();
+// Register platform type
+platformTypeRegistry.register({
+  id: 'custom',
+  displayName: 'New API',
+  icon: '$(server)',
+  configSchema: new CustomAdapter('temp', 'temp', {}).getConfigurationSchema(),
+  AdapterClass: CustomAdapter,
+});

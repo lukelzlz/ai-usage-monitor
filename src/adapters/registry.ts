@@ -1,30 +1,33 @@
 /**
- * Adapter Registry - Manages all platform adapters
+ * Adapter Registry - Manages all platform adapter instances
  */
-import { IUsageAdapter } from './base';
+import { IUsageAdapter } from '../core/types';
+import { logger } from '../utils/logger';
 
 export class AdapterRegistry {
   private adapters: Map<string, IUsageAdapter> = new Map();
 
   /**
-   * Register a new adapter
+   * Register a new adapter instance
    */
   register(adapter: IUsageAdapter): void {
-    this.adapters.set(adapter.id, adapter);
+    this.adapters.set(adapter.instanceId, adapter);
+    logger.debug(`Registered adapter: ${adapter.instanceId} (${adapter.instanceName})`);
   }
 
   /**
-   * Unregister an adapter
+   * Unregister an adapter instance
    */
-  unregister(id: string): void {
-    this.adapters.delete(id);
+  unregister(instanceId: string): void {
+    this.adapters.delete(instanceId);
+    logger.debug(`Unregistered adapter: ${instanceId}`);
   }
 
   /**
-   * Get an adapter by ID
+   * Get an adapter by instance ID
    */
-  get(id: string): IUsageAdapter | undefined {
-    return this.adapters.get(id);
+  get(instanceId: string): IUsageAdapter | undefined {
+    return this.adapters.get(instanceId);
   }
 
   /**
@@ -58,8 +61,8 @@ export class AdapterRegistry {
   /**
    * Check if an adapter exists
    */
-  has(id: string): boolean {
-    return this.adapters.has(id);
+  has(instanceId: string): boolean {
+    return this.adapters.has(instanceId);
   }
 
   /**
@@ -70,10 +73,11 @@ export class AdapterRegistry {
   }
 
   /**
-   * Clear all adapters (mainly for testing)
+   * Clear all adapters (mainly for reinitialization)
    */
   clear(): void {
     this.adapters.clear();
+    logger.debug('Cleared all adapters');
   }
 }
 

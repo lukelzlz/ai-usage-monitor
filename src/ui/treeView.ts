@@ -9,6 +9,7 @@ import {
   EmptyTreeItem,
   NotConfiguredTreeItem,
   ErrorTreeItem,
+  AddAccountTreeItem,
 } from './treeItems';
 import { registry } from '../adapters/registry';
 import { logger } from '../utils/logger';
@@ -25,8 +26,8 @@ export class UsageTreeView implements vscode.TreeDataProvider<vscode.TreeItem> {
     this._onDidChangeTreeData.fire();
   }
 
-  updateUsage(platformId: string, usage: PlatformUsage): void {
-    this.usageData.set(platformId, usage);
+  updateUsage(instanceId: string, usage: PlatformUsage): void {
+    this.usageData.set(instanceId, usage);
     this._onDidChangeTreeData.fire();
   }
 
@@ -40,84 +41,83 @@ export class UsageTreeView implements vscode.TreeDataProvider<vscode.TreeItem> {
   }
 
   async getChildren(element?: vscode.TreeItem): Promise<vscode.TreeItem[]> {
-    // If no element, return top-level items (platforms)
     if (!element) {
-      return this.getPlatformItems();
+      return this.getAccountItems();
     }
 
-    // If element is a platform, return its usage items
     if (element instanceof PlatformTreeItem) {
-      return this.getUsageItems(element.platform);
+      return this.getUsageItems(element.usage);
     }
 
     return [];
   }
 
-  private async getPlatformItems(): Promise<vscode.TreeItem[]> {
+  private async getAccountItems(): Promise<vscode.TreeItem[]> {
     const adapters = registry.getAll();
     const items: vscode.TreeItem[] = [];
 
     for (const adapter of adapters) {
-      const usage = this.usageData.get(adapter.id);
+      const usage = this.usageData.get(adapter.instanceId);
 
       if (usage) {
-        // Platform has usage data
         items.push(new PlatformTreeItem(usage));
-
-        if (usage.error) {
-          // Add error item as child
-          items.push(new ErrorTreeItem(adapter.id, usage.error));
-        }
       } else if (adapter.isEnabled()) {
-        // Platform is enabled but no data yet
         if (adapter.isConfigured()) {
-          // Configured but not fetched yet
           items.push(new PlatformTreeItem({
-            platform: adapter.id,
-            displayName: adapter.displayName,
+            platform: adapter.platformType,
+            displayName: adapter.instanceName,
             icon: adapter.icon,
             usages: [],
             lastUpdated: new Date(),
             enabled: true,
+            instanceId: adapter.instanceId,
+            platformType: adapter.platformType,
           }));
         } else {
-          // Not configured
-          items.push(new NotConfiguredTreeItem(adapter.id, adapter.displayName));
+          items.push(new NotConfiguredTreeItem(adapter.instanceId, adapter.instanceName));
         }
       }
     }
 
-    // Show empty state if no items
-    if (items.length === 0) {
-      items.push(new EmptyTreeItem('尚未配置任何平台。点击下方按钮开始配置。'));
-    }
+    // Add "Add Account" button at the bottom
+    items.push(new AddAccountTreeItem());
 
     return items;
   }
 
-  private getUsageItems(platform: PlatformUsage): vscode.TreeItem[] {
-    const items: vscode.TreeItem[] = [];
-
-    for (const usage of platform.usages) {
-      items.push(new UsageTreeItem(platform.platform, usage));
-    }
-
-    return items;
-  }
-
-  /**
-   * Get the platform ID from a tree item
-   */
-  getPlatformId(element: vscode.TreeItem): string | undefined {
+  getInstanceId(element: vscode.TreeItem): string | undefined {
     if (element instanceof PlatformTreeItem) {
-      return element.platform.platform;
+      return element.usage.instanceId;
     }
     if (element instanceof UsageTreeItem) {
-      return element.platformId;
+      return element.instanceId;
     }
     if (element instanceof ErrorTreeItem) {
-      return element['platformId'];
+      return element['instanceId'];
+    }
+    if (element instanceof NotConfiguredTreeItem) {
+      return element['instanceId'];
     }
     return undefined;
+  }
+
+  private async getUsageItems(usage: PlatformUsage): Promise<vscode.TreeItem[]> {
+    const items: vscode.TreeItem[] = [];
+
+    if (usage.error) {
+      items.push(new ErrorTreeItem(usage.instanceId || usage.platform, usage.error));
+      return items;
+    }
+
+    if (!usage.usages || usage.usages.length === 0) {
+      items.push(new EmptyTreeItem(usage.instanceId || usage.platform));
+      return items;
+    }
+
+    for (const usageInfo of usage.usages) {
+      items.push(new UsageTreeItem(usage.instanceId || usage.platform, usageInfo));
+    }
+
+    return items;
   }
 }

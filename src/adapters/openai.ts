@@ -1,11 +1,11 @@
 /**
  * OpenAI Platform Adapter
  */
-import * as vscode from 'vscode';
 import { BaseAdapter } from './base';
 import { ConfigSchema, FetchResult, PlatformUsage, UsageInfo, PlatformConsole } from '../core/types';
 import { fetchJson } from '../utils/http';
 import { logger } from '../utils/logger';
+import { platformTypeRegistry } from './platformTypes';
 
 /**
  * OpenAI API response structures
@@ -29,19 +29,30 @@ interface OpenAIUsage {
 }
 
 export class OpenAIAdapter extends BaseAdapter {
-  readonly id = 'openai';
-  readonly displayName = 'OpenAI';
-  readonly icon = '$(cloud)';
-  readonly consoleUrl: PlatformConsole = {
-    url: 'https://platform.openai.com/usage',
-    label: 'Open OpenAI Usage',
-  };
-
   private readonly usageEndpoint = 'https://api.openai.com/v1/usage';
   private readonly subscriptionEndpoint = 'https://api.openai.com/v1/dashboard/billing/subscription';
 
+  constructor(instanceId: string, instanceName: string, config: Record<string, any>) {
+    super(instanceId, instanceName, config);
+  }
+
+  protected getPlatformType(): string {
+    return 'openai';
+  }
+
+  protected getIcon(): string {
+    return '$(cloud)';
+  }
+
+  protected getConsoleUrl(): PlatformConsole {
+    return {
+      url: 'https://platform.openai.com/usage',
+      label: 'Open OpenAI Usage',
+    };
+  }
+
   /**
-   * Check if the adapter is configured (has API key)
+   * Check if adapter is configured (has API key)
    */
   isConfigured(): boolean {
     const apiKey = this.getConfigValue<string>('apiKey', '');
@@ -123,12 +134,14 @@ export class OpenAIAdapter extends BaseAdapter {
     ];
 
     return {
-      platform: this.id,
-      displayName: this.displayName,
+      platform: this.platformType,
+      displayName: this.instanceName,
       icon: this.icon,
       usages,
       lastUpdated: new Date(),
       enabled: this.isEnabled(),
+      instanceId: this.instanceId,
+      platformType: this.platformType,
     };
   }
 
@@ -137,13 +150,6 @@ export class OpenAIAdapter extends BaseAdapter {
    */
   getConfigurationSchema(): ConfigSchema[] {
     return [
-      {
-        key: 'enabled',
-        type: 'boolean',
-        label: 'Enable OpenAI',
-        default: false,
-        description: 'Enable OpenAI usage monitoring',
-      },
       {
         key: 'apiKey',
         type: 'string',
@@ -163,5 +169,12 @@ export class OpenAIAdapter extends BaseAdapter {
   }
 }
 
-// Export singleton instance
-export const openaiAdapter = new OpenAIAdapter();
+// Register platform type
+platformTypeRegistry.register({
+  id: 'openai',
+  displayName: 'OpenAI',
+  icon: '$(cloud)',
+  configSchema: new OpenAIAdapter('temp', 'temp', {}).getConfigurationSchema(),
+  consoleUrl: 'https://platform.openai.com/usage',
+  AdapterClass: OpenAIAdapter,
+});

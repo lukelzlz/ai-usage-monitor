@@ -1,130 +1,110 @@
 /**
- * Base interface for platform adapters
+ * Base adapter class for platform adapters
  * Each AI platform implements this interface to provide usage data
  */
 import * as vscode from 'vscode';
-import { ConfigSchema, FetchResult, PlatformUsage, PlatformConsole } from '../core/types';
-
-export interface IUsageAdapter {
-  /** Unique identifier for this platform */
-  readonly id: string;
-  /** Display name shown in UI */
-  readonly displayName: string;
-  /** Icon (VSCode codicon format, e.g., '$(sparkle)') */
-  readonly icon: string;
-  /** Platform console URL */
-  readonly consoleUrl?: PlatformConsole;
-
-  /**
-   * Check if this adapter is configured (has API key/token, etc.)
-   */
-  isConfigured(): boolean;
-
-  /**
-   * Check if this adapter is enabled in settings
-   */
-  isEnabled(): boolean;
-
-  /**
-   * Fetch usage data from the platform API
-   * @returns Promise resolving to fetch result
-   */
-  fetchUsage(): Promise<FetchResult>;
-
-  /**
-   * Get configuration schema for this platform's settings
-   * @returns Array of configuration field definitions
-   */
-  getConfigurationSchema(): ConfigSchema[];
-
-  /**
-   * Get the configuration section prefix for this platform
-   * @returns Configuration section path (e.g., 'ai-usage-monitor.platforms.zhipu')
-   */
-  getConfigSection(): string;
-
-  /**
-   * Enable/disable this platform
-   * @param enabled Whether to enable the platform
-   */
-  setEnabled(enabled: boolean): Promise<void>;
-
-  /**
-   * Get current configuration values
-   * @returns Object with current configuration values
-   */
-  getConfig(): Record<string, any>;
-}
+import { ConfigSchema, FetchResult, PlatformConsole, IUsageAdapter } from '../core/types';
 
 /**
  * Abstract base class providing common adapter functionality
+ * Supports multi-account instances
  */
 export abstract class BaseAdapter implements IUsageAdapter {
-  abstract readonly id: string;
-  abstract readonly displayName: string;
-  abstract readonly icon: string;
+  readonly instanceId: string;
+  readonly instanceName: string;
+  readonly platformType: string;
+  readonly displayName: string;
+  readonly icon: string;
   readonly consoleUrl?: PlatformConsole;
 
-  constructor() {}
+  protected config: Record<string, any>;
 
-  /**
-   * Get the configuration section for this platform
-   */
-  getConfigSection(): string {
-    return `ai-usage-monitor.platforms.${this.id}`;
+  constructor(instanceId: string, instanceName: string, config: Record<string, any>) {
+    this.instanceId = instanceId;
+    this.instanceName = instanceName;
+    this.config = config;
+    this.platformType = this.getPlatformType();
+    this.displayName = instanceName;
+    this.icon = this.getIcon();
+    this.consoleUrl = this.getConsoleUrl();
   }
 
   /**
-   * Check if this adapter is enabled in settings
+   * Get the platform type ID
+   */
+  protected abstract getPlatformType(): string;
+
+  /**
+   * Get the icon for this platform
+   */
+  protected abstract getIcon(): string;
+
+  /**
+   * Get the console URL for this platform
+   */
+  protected abstract getConsoleUrl(): PlatformConsole | undefined;
+
+  /**
+   * Check if this adapter is enabled
    */
   isEnabled(): boolean {
-    const config = vscode.workspace.getConfiguration();
-    return config.get<boolean>(`${this.getConfigSection()}.enabled`, false);
+    return this.config.enabled !== false;
   }
 
   /**
-   * Enable/disable this platform
+   * Enable/disable this adapter
    */
   async setEnabled(enabled: boolean): Promise<void> {
-    const config = vscode.workspace.getConfiguration();
-    await config.update(`${this.getConfigSection()}.enabled`, enabled, vscode.ConfigurationTarget.Global);
+    const config = vscode.workspace.getConfiguration('ai-usage-monitor');
+    const accounts = config.get<any[]>('accounts', []);
+
+    // Find and update the account
+    const accountIndex = accounts.findIndex((a: any) => a.id === this.instanceId);
+    if (accountIndex >= 0) {
+      accounts[accountIndex].enabled = enabled;
+      await config.update('accounts', accounts, vscode.ConfigurationTarget.Global);
+      this.config.enabled = enabled;
+    }
   }
 
   /**
    * Get current configuration values
    */
   getConfig(): Record<string, any> {
-    const config = vscode.workspace.getConfiguration();
-    const schema = this.getConfigurationSchema();
-    const result: Record<string, any> = {};
-
-    for (const field of schema) {
-      result[field.key] = config.get(`${this.getConfigSection()}.${field.key}`, field.default);
-    }
-
-    return result;
+    return { ...this.config };
   }
 
   /**
    * Get a specific configuration value
    */
   protected getConfigValue<T>(key: string, defaultValue?: T): T {
-    const config = vscode.workspace.getConfiguration();
-    return config.get<T>(`${this.getConfigSection()}.${key}`, defaultValue as T);
+    return this.config[key] ?? defaultValue;
   }
 
   /**
    * Set a specific configuration value
    */
   protected async setConfigValue(key: string, value: any): Promise<void> {
-    const config = vscode.workspace.getConfiguration();
-    await config.update(`${this.getConfigSection()}.${key}`, value, vscode.ConfigurationTarget.Global);
+    const config = vscode.workspace.getConfiguration('ai-usage-monitor');
+    const accounts = config.get<any[]>('accounts', []);
+
+    // Find and update the account
+    const accountIndex = accounts.findIndex((a: any) => a.id === this.instanceId);
+    if (accountIndex >= 0) {
+      accounts[accountIndex].config[key] = value;
+      await config.update('accounts', accounts, vscode.ConfigurationTarget.Global);
+      this.config[key] = value;
+    }
   }
+
+  /**
+   * Get configuration schema for this platform
+   */
+  abstract getConfigurationSchema(): ConfigSchema[];
 
   /**
    * Must be implemented by each adapter
    */
   abstract isConfigured(): boolean;
   abstract fetchUsage(): Promise<FetchResult>;
-  abstract getConfigurationSchema(): ConfigSchema[];
 }

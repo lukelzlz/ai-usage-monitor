@@ -40,6 +40,10 @@ export interface PlatformUsage {
   error?: string;
   /** Whether this platform is enabled */
   enabled: boolean;
+  /** Account instance ID (for multi-account support) */
+  instanceId?: string;
+  /** Platform type (e.g., 'zhipu', 'deepseek', 'openai', 'custom') */
+  platformType?: string;
 }
 
 /**
@@ -68,7 +72,7 @@ export interface ConfigSchema {
 export interface PlatformConsole {
   /** URL to open in browser */
   url: string;
-  /** Label for the menu item */
+  /** Label for menu item */
   label?: string;
 }
 
@@ -82,4 +86,81 @@ export interface FetchResult {
   error?: string;
   /** Whether the adapter is configured */
   configured: boolean;
+}
+
+/**
+ * Account configuration for multi-account support
+ */
+export interface AccountConfig {
+  /** Unique identifier for this account instance */
+  id: string;
+  /** Platform type: zhipu, deepseek, openai, custom */
+  type: string;
+  /** User-defined display name */
+  name: string;
+  /** Whether this account is enabled */
+  enabled: boolean;
+  /** Platform-specific configuration */
+  config: Record<string, any>;
+}
+
+/**
+ * Platform type definition
+ */
+export interface PlatformType {
+  /** Platform type ID */
+  id: string;
+  /** Default display name */
+  displayName: string;
+  /** Icon (VSCode codicon format) */
+  icon: string;
+  /** Configuration schema for this platform */
+  configSchema: ConfigSchema[];
+  /** Console URL (optional) */
+  consoleUrl?: string;
+  /** Adapter class constructor */
+  AdapterClass: new (instanceId: string, instanceName: string, config: Record<string, any>) => IUsageAdapter;
+}
+
+/**
+ * Adapter interface for multi-account support
+ */
+export interface IUsageAdapter {
+  /** Account instance ID */
+  readonly instanceId: string;
+  /** User-defined display name */
+  readonly instanceName: string;
+  /** Platform type */
+  readonly platformType: string;
+  /** Display name */
+  readonly displayName: string;
+  /** Icon */
+  readonly icon: string;
+  /** Console URL */
+  readonly consoleUrl?: PlatformConsole;
+
+  /**
+   * Check if this adapter is configured
+   */
+  isConfigured(): boolean;
+
+  /**
+   * Check if this adapter is enabled
+   */
+  isEnabled(): boolean;
+
+  /**
+   * Fetch usage data
+   */
+  fetchUsage(): Promise<FetchResult>;
+
+  /**
+   * Get current configuration
+   */
+  getConfig(): Record<string, any>;
+
+  /**
+   * Enable/disable this adapter
+   */
+  setEnabled(enabled: boolean): Promise<void>;
 }
