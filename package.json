@@ -2,7 +2,7 @@
   "name": "ai-usage-monitor",
   "displayName": "AI Usage Monitor",
   "description": "Monitor AI platform usage and balance across multiple providers and accounts",
-  "version": "0.3.5",
+  "version": "0.4.0",
   "publisher": "lukelzlz",
   "engines": {
     "vscode": "^1.85.0"
@@ -156,6 +156,20 @@
           "default": false,
           "description": "在状态栏显示账号名称"
         },
+        "ai-usage-monitor.prediction.lowUsageThreshold": {
+          "type": "number",
+          "default": 20,
+          "minimum": 0,
+          "maximum": 100,
+          "description": "低额度阈值（百分比），低于此值时在状态栏显示警告"
+        },
+        "ai-usage-monitor.prediction.maxHistoryDays": {
+          "type": "number",
+          "default": 7,
+          "minimum": 1,
+          "maximum": 30,
+          "description": "保留历史数据的天数"
+        },
         "ai-usage-monitor.accounts": {
           "type": "array",
           "default": [],
@@ -170,8 +184,8 @@
               },
               "type": {
                 "type": "string",
-                "description": "平台类型：zhipu, deepseek, openai, claude, custom",
-                "enum": ["zhipu", "deepseek", "openai", "claude", "custom"]
+                "description": "平台类型：zhipu, deepseek, openai, claude, custom, openrouter",
+                "enum": ["zhipu", "deepseek", "openai", "claude", "custom", "openrouter"]
               },
               "name": {
                 "type": "string",
@@ -184,6 +198,11 @@
               "config": {
                 "type": "object",
                 "description": "平台特定配置"
+              },
+              "predictionEnabled": {
+                "type": "boolean",
+                "default": true,
+                "description": "是否启用额度预测功能"
               }
             }
           }

@@ -102,6 +102,34 @@ export interface AccountConfig {
   enabled: boolean;
   /** Platform-specific configuration */
   config: Record<string, any>;
+  /** Whether prediction is enabled for this account */
+  predictionEnabled?: boolean;
+}
+
+/**
+ * Historical usage data point
+ */
+export interface UsageDataPoint {
+  /** Timestamp of the data point */
+  timestamp: number;
+  /** Remaining amount (can be tokens, balance, etc.) */
+  remaining: number;
+  /** Total limit */
+  total: number;
+}
+
+/**
+ * Prediction result
+ */
+export interface PredictionResult {
+  /** Predicted days until depletion */
+  daysUntilDepletion: number;
+  /** Estimated depletion date */
+  estimatedDepletionDate: Date;
+  /** Usage rate per day */
+  dailyUsageRate: number;
+  /** Whether prediction is available */
+  available: boolean;
 }
 
 /**

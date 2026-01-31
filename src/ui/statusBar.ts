@@ -2,14 +2,22 @@
  * Status Bar component for displaying usage in VSCode status bar
  */
 import * as vscode from 'vscode';
-import { PlatformUsage } from '../core/types';
+import { PlatformUsage, PredictionResult } from '../core/types';
 
 export class UsageStatusBar {
   private statusBarItems: Map<string, vscode.StatusBarItem> = new Map();
   private config: vscode.WorkspaceConfiguration;
+  private predictionData: Map<string, PredictionResult> = new Map();
 
   constructor() {
     this.config = vscode.workspace.getConfiguration('ai-usage-monitor');
+  }
+
+  /**
+   * Update prediction data for a specific account
+   */
+  updatePrediction(instanceId: string, prediction: PredictionResult): void {
+    this.predictionData.set(instanceId, prediction);
   }
 
   /**
@@ -18,6 +26,8 @@ export class UsageStatusBar {
   updateUsage(instanceId: string, usage: PlatformUsage): void {
     const statusBarItem = this.statusBarItems.get(instanceId) || this.createStatusBarItem(instanceId);
     const showAccountName = this.config.get<boolean>('statusBar.showAccountName', false);
+    const lowUsageThreshold = this.config.get<number>('prediction.lowUsageThreshold', 20);
+    const prediction = this.predictionData.get(instanceId);
 
     // For custom (New API) type, show balance only without progress bar
     if (usage.platformType === 'custom') {
@@ -35,6 +45,7 @@ export class UsageStatusBar {
 
     // For other platforms, show percentage with progress bar
     const percentage = this.calculatePercentage(usage);
+    const remainingPercentage = 100 - percentage;
 
     // Create progress bar
     const filled = Math.floor(percentage / 10);
@@ -49,14 +60,58 @@ export class UsageStatusBar {
       color = 'warningForeground';
     }
 
-    if (showAccountName) {
-      statusBarItem.text = `$(pulse) ${usage.displayName}: ${percentage.toFixed(0)}% ${progressBar}`;
-    } else {
-      statusBarItem.text = `$(pulse) ${percentage.toFixed(0)}% ${progressBar}`;
+    // Add warning if usage is low and prediction is available
+    let text = '';
+    let tooltip = `${usage.displayName}: ${percentage.toFixed(1)}%`;
+    const shouldShowWarning = remainingPercentage <= lowUsageThreshold && prediction?.available;
+
+    if (shouldShowWarning) {
+      const shortPrediction = this.formatShortPrediction(prediction!);
+      if (shortPrediction) {
+        if (showAccountName) {
+          text = `$(warning) ${usage.displayName}: ${shortPrediction}`;
+        } else {
+          text = `$(warning) ${shortPrediction}`;
+        }
+        tooltip = `${usage.displayName}: 剩余 ${remainingPercentage.toFixed(1)}%\n预计 ${prediction!.estimatedDepletionDate.toLocaleDateString()} 用完`;
+      }
     }
+
+    if (!text) {
+      if (showAccountName) {
+        text = `$(pulse) ${usage.displayName}: ${percentage.toFixed(0)}% ${progressBar}`;
+      } else {
+        text = `$(pulse) ${percentage.toFixed(0)}% ${progressBar}`;
+      }
+    }
+
+    statusBarItem.text = text;
     statusBarItem.color = new vscode.ThemeColor(color);
-    statusBarItem.tooltip = `${usage.displayName}: ${percentage.toFixed(1)}%`;
+    statusBarItem.tooltip = tooltip;
     statusBarItem.show();
+  }
+
+  /**
+   * Format short prediction for status bar
+   */
+  private formatShortPrediction(prediction: PredictionResult): string {
+    const { daysUntilDepletion } = prediction;
+
+    if (daysUntilDepletion < 0) {
+      return '已用完';
+    }
+
+    if (daysUntilDepletion < 1) {
+      const hours = Math.floor(daysUntilDepletion * 24);
+      return `剩${hours}小时`;
+    }
+
+    if (daysUntilDepletion < 30) {
+      return `剩${Math.floor(daysUntilDepletion)}天`;
+    }
+
+    const months = Math.floor(daysUntilDepletion / 30);
+    return `剩${months}月`;
   }
 
   /**

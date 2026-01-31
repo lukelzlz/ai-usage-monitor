@@ -9,6 +9,8 @@ import { RefreshScheduler } from './scheduler';
 import { logger } from '../utils/logger';
 import { adapterFactory } from '../adapters/factory';
 import { AccountConfig } from './types';
+import { getHistoryStorage } from './historyStorage';
+import { PredictionEngine } from './predictionEngine';
 
 export class UsageManager {
   private statusBar: UsageStatusBar;
@@ -16,6 +18,8 @@ export class UsageManager {
   private scheduler: RefreshScheduler;
   private disposables: vscode.Disposable[] = [];
   private configChangeDisposable?: vscode.Disposable;
+  private historyStorage = getHistoryStorage();
+  private predictionEngine = new PredictionEngine();
 
   constructor() {
     this.statusBar = new UsageStatusBar();
@@ -153,6 +157,34 @@ export class UsageManager {
     const result = await adapter.fetchUsage();
 
     if (result.usage) {
+      // Check if prediction is enabled for this account
+      const config = vscode.workspace.getConfiguration('ai-usage-monitor');
+      const accounts = config.get<AccountConfig[]>('accounts', []);
+      const account = accounts.find(a => a.id === instanceId);
+      const predictionEnabled = account?.predictionEnabled ?? true;
+
+      // Collect history data for prediction
+      if (predictionEnabled && result.usage.usages && result.usage.usages.length > 0) {
+        // Find the first usage info that has percentage (not balance)
+        const usageInfo = result.usage.usages.find(u => u.percentage >= 0);
+        if (usageInfo) {
+          const total = 100; // percentage based
+          const used = usageInfo.percentage;
+          const remaining = total - used;
+
+          // Store data point
+          this.historyStorage.addDataPoint(instanceId, remaining, total);
+
+          // Calculate prediction
+          const history = this.historyStorage.getHistory(instanceId);
+          const prediction = this.predictionEngine.calculatePrediction(history, remaining, total);
+
+          // Update UI with prediction
+          this.statusBar.updatePrediction(instanceId, prediction);
+          this.treeView.updatePrediction(instanceId, prediction);
+        }
+      }
+
       this.statusBar.updateUsage(instanceId, result.usage);
       this.treeView.updateUsage(instanceId, result.usage);
     } else if (result.error) {

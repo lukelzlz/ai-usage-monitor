@@ -2,7 +2,7 @@
  * TreeView component for displaying usage data
  */
 import * as vscode from 'vscode';
-import { PlatformUsage } from '../core/types';
+import { PlatformUsage, PredictionResult } from '../core/types';
 import {
   PlatformTreeItem,
   UsageTreeItem,
@@ -10,6 +10,7 @@ import {
   NotConfiguredTreeItem,
   ErrorTreeItem,
   AddAccountTreeItem,
+  PredictionTreeItem,
 } from './treeItems';
 import { registry } from '../adapters/registry';
 import { logger } from '../utils/logger';
@@ -19,6 +20,7 @@ export class UsageTreeView implements vscode.TreeDataProvider<vscode.TreeItem> {
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   private usageData: Map<string, PlatformUsage> = new Map();
+  private predictionData: Map<string, PredictionResult> = new Map();
 
   constructor() {}
 
@@ -28,6 +30,11 @@ export class UsageTreeView implements vscode.TreeDataProvider<vscode.TreeItem> {
 
   updateUsage(instanceId: string, usage: PlatformUsage): void {
     this.usageData.set(instanceId, usage);
+    this._onDidChangeTreeData.fire();
+  }
+
+  updatePrediction(instanceId: string, prediction: PredictionResult): void {
+    this.predictionData.set(instanceId, prediction);
     this._onDidChangeTreeData.fire();
   }
 
@@ -116,6 +123,13 @@ export class UsageTreeView implements vscode.TreeDataProvider<vscode.TreeItem> {
 
     for (const usageInfo of usage.usages) {
       items.push(new UsageTreeItem(usage.instanceId || usage.platform, usageInfo));
+    }
+
+    // Add prediction if available
+    const instanceId = usage.instanceId || usage.platform;
+    const prediction = this.predictionData.get(instanceId);
+    if (prediction) {
+      items.push(new PredictionTreeItem(instanceId, prediction));
     }
 
     return items;

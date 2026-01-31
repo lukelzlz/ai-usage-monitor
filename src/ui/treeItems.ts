@@ -2,7 +2,7 @@
  * Tree Item definitions for the usage view
  */
 import * as vscode from 'vscode';
-import { PlatformUsage, UsageInfo } from '../core/types';
+import { PlatformUsage, UsageInfo, PredictionResult } from '../core/types';
 
 /**
  * Platform tree item - represents a platform/account
@@ -127,5 +127,65 @@ export class AddAccountTreeItem extends vscode.TreeItem {
       command: 'ai-usage-monitor.addAccount',
       title: '添加账号',
     };
+  }
+}
+
+/**
+ * Prediction tree item - shows usage prediction
+ */
+export class PredictionTreeItem extends vscode.TreeItem {
+  readonly instanceId: string;
+  readonly prediction: PredictionResult;
+
+  constructor(instanceId: string, prediction: PredictionResult) {
+    const label = '额度预测';
+    let description = '';
+
+    if (!prediction.available) {
+      description = '数据不足';
+    } else {
+      const { daysUntilDepletion, estimatedDepletionDate } = prediction;
+
+      if (daysUntilDepletion < 0) {
+        description = '已用完';
+      } else if (daysUntilDepletion < 1) {
+        const hours = Math.floor(daysUntilDepletion * 24);
+        description = `约 ${hours} 小时后用完`;
+      } else if (daysUntilDepletion < 30) {
+        const days = Math.floor(daysUntilDepletion);
+        description = `约 ${days} 天后用完`;
+      } else {
+        const months = Math.floor(daysUntilDepletion / 30);
+        description = `约 ${months} 个月后用完`;
+      }
+
+      description += ` (${estimatedDepletionDate.toLocaleDateString()})`;
+    }
+
+    super(label, vscode.TreeItemCollapsibleState.None);
+
+    this.instanceId = instanceId;
+    this.prediction = prediction;
+    this.description = description;
+
+    // Set icon based on urgency
+    if (!prediction.available) {
+      this.iconPath = new vscode.ThemeIcon('history', new vscode.ThemeColor('descriptionForeground'));
+    } else if (prediction.daysUntilDepletion < 1) {
+      this.iconPath = new vscode.ThemeIcon('warning', new vscode.ThemeColor('errorForeground'));
+    } else if (prediction.daysUntilDepletion < 7) {
+      this.iconPath = new vscode.ThemeIcon('warning', new vscode.ThemeColor('warningForeground'));
+    } else {
+      this.iconPath = new vscode.ThemeIcon('calendar', new vscode.ThemeColor('descriptionForeground'));
+    }
+
+    // Tooltip with more details
+    if (prediction.available) {
+      this.tooltip = `基于使用速度预测\n`
+        + `预计用完时间: ${prediction.estimatedDepletionDate.toLocaleString()}\n`
+        + `每日使用: ${prediction.dailyUsageRate.toFixed(2)}`;
+    } else {
+      this.tooltip = '需要更多使用数据才能进行预测';
+    }
   }
 }
