@@ -127,6 +127,17 @@ export class ZhipuAdapter extends BaseAdapter {
       }
     }
 
+    // Sort: TOKENS_LIMIT first, then TIME_LIMIT, then others
+    usages.sort((a, b) => {
+      const priorityMap: Record<string, number> = {
+        'tokens': 0,
+        'time': 1,
+      };
+      const aPriority = priorityMap[a.type] ?? 2;
+      const bPriority = priorityMap[b.type] ?? 2;
+      return aPriority - bPriority;
+    });
+
     return {
       platform: this.platformType,
       displayName: this.instanceName,
